@@ -15,6 +15,7 @@ __pycache__/
 .env.*
 !.env.example
 cloudinary.xml
+mysql.xml
 *.local.yml
 *.local.properties
 /database/bookstore-demo.sql

@@ -5,6 +5,13 @@ $state = Join-Path $env:LOCALAPPDATA 'BookstoreChain'
 $config = Import-Clixml -LiteralPath (Join-Path $state 'cloudinary.xml')
 $java = (Get-Command java.exe -ErrorAction Stop).Source
 if (!(Test-Path -LiteralPath $war)) { throw "WAR not found: $war" }
+$tools = Join-Path $env:USERPROFILE 'Downloads\bookstore-local-tools'
+$mysql = Join-Path $tools 'mysql-8.4.8-winx64\bin\mysqld.exe'
+if (!(Get-NetTCPConnection -LocalPort 3307 -State Listen -ErrorAction SilentlyContinue)) {
+    if (!(Test-Path -LiteralPath $mysql)) { throw 'Install MySQL 8.4.8 in bookstore-local-tools first.' }
+    Start-Process $mysql -ArgumentList @('--no-defaults', ('--basedir="' + "$tools\mysql-8.4.8-winx64" + '"'), ('--datadir="' + "$tools\mysql-data" + '"'), '--port=3307', '--bind-address=127.0.0.1', '--mysqlx=OFF', '--console') -RedirectStandardOutput "$tools\mysql.log" -RedirectStandardError "$tools\mysql-error.log" -WindowStyle Hidden
+    Start-Sleep -Seconds 5
+}
 $listeners = @(Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue)
 foreach ($owner in ($listeners.OwningProcess | Select-Object -Unique)) {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$owner"
@@ -15,10 +22,15 @@ foreach ($owner in ($listeners.OwningProcess | Select-Object -Unique)) {
     Stop-Process -Id $owner -ErrorAction Stop
     Wait-Process -Id $owner -Timeout 30 -ErrorAction SilentlyContinue
 }
-$names = @('CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET')
+$names = @('CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET','SPRING_DATASOURCE_URL','SPRING_DATASOURCE_USERNAME','SPRING_DATASOURCE_PASSWORD','SPRING_PROFILES_ACTIVE')
 $previous = @{}
 foreach ($name in $names) { $previous[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 try {
+    $env:SPRING_PROFILES_ACTIVE = 'mysql'
+    $env:SPRING_DATASOURCE_URL = 'jdbc:mysql://127.0.0.1:3307/bookstore?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8'
+    $database = Import-Clixml -LiteralPath (Join-Path $state 'mysql.xml')
+    $env:SPRING_DATASOURCE_USERNAME = $database.Username
+    $env:SPRING_DATASOURCE_PASSWORD = [System.Net.NetworkCredential]::new('', $database.Password).Password
     $env:CLOUDINARY_CLOUD_NAME = $config.CloudName
     $env:CLOUDINARY_API_KEY = [System.Net.NetworkCredential]::new('', $config.ApiKey).Password
     $env:CLOUDINARY_API_SECRET = [System.Net.NetworkCredential]::new('', $config.ApiSecret).Password

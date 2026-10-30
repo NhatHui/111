@@ -1,5 +1,7 @@
 # Bookstore Chain Management System
 
+**Chạy trên máy khác với database MySQL 111 sách:** xem [hướng dẫn nhập SQL và chạy Spring Boot](database/RUN-ON-ANOTHER-PC.md). File bàn giao: `database/bookstore-mysql.sql` (không chứa tài khoản người dùng hoặc khóa dịch vụ).
+
 **Đề án cuối kỳ - Lập trình Web**
 Website quản lý chuỗi cửa hàng sách cũ - **Spring Boot + JSP/JSTL + Bootstrap
 5 + Spring Data JPA + MySQL/SQL Server/PostgreSQL + JWT + WebSocket +
